@@ -1,0 +1,108 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disaster Relief Logistics</title>
+<link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body class="container mt-4">
+    <h2 class="mb-3">Disaster Relief Logistics Planning</h2>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <!-- Warehouse & Supply -->
+        <h4>Enter Warehouse & Supply</h4>
+        <table class="table table-bordered" id="warehouse_table">
+            <thead>
+                <tr>
+                    <th>Warehouse Name</th>
+                    <th>Supply Capacity</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><input type="text" name="warehouse_name[]" class="form-control"></td>
+                    <td><input type="number" name="warehouse_supply[]" class="form-control"></td>
+                    <td><button type="button" class="btn btn-danger remove-row">X</button></td>
+                </tr>
+            </tbody>
+        </table>
+        <button type="button" class="btn btn-success add-row" data-target="warehouse_table">+ Add Row</button>
+
+        <!-- Affected Areas & Demand -->
+        <h4>Enter Affected Areas & Demand</h4>
+        <table class="table table-bordered" id="area_table">
+            <thead>
+                <tr>
+                    <th>Area Name</th>
+                    <th>Demand</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><input type="text" name="area_name[]" class="form-control"></td>
+                    <td><input type="number" name="area_demand[]" class="form-control"></td>
+                    <td><button type="button" class="btn btn-danger remove-row">X</button></td>
+                </tr>
+            </tbody>
+        </table>
+        <button type="button" class="btn btn-success add-row" data-target="area_table">+ Add Row</button>
+
+        <!-- Transportation Costs -->
+        <h4>Enter Transportation Costs</h4>
+        <table class="table table-bordered" id="transport_table">
+            <thead>
+                <tr>
+                    <th>From (Warehouse)</th>
+                    <th>To (Area)</th>
+                    <th>Cost per Unit</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><input type="text" name="from_warehouse[]" class="form-control"></td>
+                    <td><input type="text" name="to_area[]" class="form-control"></td>
+                    <td><input type="number" name="transport_cost[]" class="form-control"></td>
+                    <td><button type="button" class="btn btn-danger remove-row">X</button></td>
+                </tr>
+            </tbody>
+        </table>
+        <button type="button" class="btn btn-success add-row" data-target="transport_table">+ Add Row</button>
+
+        <br><br>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+    {% if error_message %}
+    <script>
+        alert("{{ error_message }}"); 
+        window.location.href = window.location.href;  // Refresh the page
+    </script>
+{% endif %}
+
+    <script>
+        $(document).ready(function () {
+            $(".add-row").click(function () {
+                let targetTable = $(this).data("target");
+                let newRow = $("#" + targetTable + " tbody tr:first").clone();
+                newRow.find("input").val(""); 
+                $("#" + targetTable + " tbody").append(newRow);
+            });
+
+            $(document).on("click", ".remove-row", function () {
+                if ($(this).closest("tbody").children("tr").length > 1) {
+                    $(this).closest("tr").remove();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
