@@ -37,9 +37,6 @@
         </tbody>
     </table>
 
-    <h3>📦 Total Units Supplied: {{ total_units_supplied }}</h3>
-    <h3>💰 Total Transportation Cost: {{ total_cost }}</h3>
-
     <h3>🚛 Total Units Per City</h3>
     <table class="table table-bordered">
         <thead class="table-dark">
@@ -75,6 +72,9 @@
             {% endfor %}
         </tbody>
     </table>
+    <br>
+    <h3>📦 Total Units Supplied: {{ total_units_supplied }}</h3>
+    <h3>💰 Total Transportation Cost: {{ total_cost }}</h3>
 
     {% else %}
     <div class="alert alert-warning">⚠ No data available.</div>

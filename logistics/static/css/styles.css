@@ -1,0 +1,21 @@
+.table-container {
+    overflow-x: auto; /* Enable horizontal scrolling on smaller screens */
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    th, td {
+        font-size: 14px;
+        padding: 8px;
+    }
+}
