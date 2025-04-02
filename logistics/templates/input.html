@@ -11,13 +11,13 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body class="container mt-4">
-    <h2 class="mb-3">Disaster Relief Logistics Planning</h2>
+    <h2 class="mb-3" style="text-align: center;">Disaster Relief Logistics Planning</h2>
+
 
     <form method="POST">
         {% csrf_token %}
-
-        <!-- Warehouse & Supply -->
-        <h4>Enter Warehouse & Supply</h4>
+        <br>
+        <h4 class="mb-3" style="text-align: center;">Enter Warehouse & Supply</h4>
         <table class="table table-bordered" id="warehouse_table">
             <thead>
                 <tr>
@@ -35,9 +35,8 @@
             </tbody>
         </table>
         <button type="button" class="btn btn-success add-row" data-target="warehouse_table">+ Add Row</button>
-
-        <!-- Affected Areas & Demand -->
-        <h4>Enter Affected Areas & Demand</h4>
+        <br>
+        <h4 class="mb-3" style="text-align: center;">Enter Affected Areas & Demand</h4>
         <table class="table table-bordered" id="area_table">
             <thead>
                 <tr>
@@ -55,9 +54,8 @@
             </tbody>
         </table>
         <button type="button" class="btn btn-success add-row" data-target="area_table">+ Add Row</button>
-
-        <!-- Transportation Costs -->
-        <h4>Enter Transportation Costs</h4>
+        <br>
+        <h4 class="mb-3" style="text-align: center;">Enter Transportation Costs</h4>
         <table class="table table-bordered" id="transport_table">
             <thead>
                 <tr>
@@ -84,7 +82,7 @@
     {% if error_message %}
     <script>
         alert("{{ error_message }}"); 
-        window.location.href = window.location.href;  // Refresh the page
+        window.location.href = window.location.href;  
     </script>
 {% endif %}
 
