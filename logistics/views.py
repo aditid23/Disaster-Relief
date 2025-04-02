@@ -19,11 +19,12 @@ def input_data(request):
         total_demand = sum(areas.values())
 
         warning_message = None  
+        actual_demands = areas.copy()
 
         if total_supply < total_demand:
             adjustment_factor = total_supply / total_demand
             areas = {area: int(demand * adjustment_factor) for area, demand in areas.items()}
-            warning_message = "Total supply is less than demand. Demand has been adjusted proportionally."
+            warning_message = "⚠ Total supply is less than demand. Demand has been adjusted proportionally."
 
         try:
             solver_output = solve_transportation_problem(warehouses, areas, costs)
@@ -44,6 +45,8 @@ def input_data(request):
         request.session['city_costs'] = city_costs
         request.session['total_cost'] = total_cost
         request.session['warning_message'] = warning_message  
+        request.session['actual_demands'] = actual_demands  
+
         return redirect('results_page')
 
     return render(request, 'input.html')
@@ -52,6 +55,7 @@ def results_page(request):
     solution = request.session.get('solution', {})
     city_costs = request.session.get('city_costs', {})
     total_cost = request.session.get('total_cost', 0)
+    actual_demands = request.session.get('actual_demands', {})
 
     if not solution:
         return render(request, 'results.html', {'error': "No solution available. Please enter input again."})
@@ -81,5 +85,6 @@ def results_page(request):
         'city_costs': city_costs,
         'sorted_cities': sorted_cities,  
         'total_units_supplied': total_units_supplied,
-        'total_cost': total_cost
+        'total_cost': total_cost,
+        'actual_demands': actual_demands  
     })

@@ -1,4 +1,6 @@
 {% load static %}
+{% load custom_filter %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,8 +13,9 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body class="container mt-4">
-    <h2 class="mb-3" style="text-align: center;">Optimization Results</h2>
+    <h2 class="mb-3 text-center">Optimization Results</h2>
     <br>
+
     {% if solution %}
     <table class="table table-bordered">
         <thead class="table-dark">
@@ -37,12 +40,14 @@
         </tbody>
     </table>
     <br>
+
     <h3>🚛 Total Units Per City</h3>
     <table class="table table-bordered">
         <thead class="table-dark">
             <tr>
                 <th>City</th>
-                <th>Total Units</th>
+                <th>Total Demand</th>
+                <th>Total Units Supplied</th>
                 <th>Total Cost</th>
             </tr>
         </thead>
@@ -50,34 +55,24 @@
             {% for city in sorted_cities %}
             <tr>
                 <td>{{ city }}</td>
-                <td>
-                    {% for key, value in city_units.items %}
-                        {% if key == city %}
-                            {{ value }}
-                        {% endif %}
-                    {% endfor %}
-                </td>
-                <td>
-                    {% for key, value in city_costs.items %}
-                        {% if key == city %}
-                            {{ value }}
-                        {% endif %}
-                    {% endfor %}
-                </td>
+                <td>{{ actual_demands|get_item:city|default:"0" }}</td>
+                <td>{{ city_units|get_item:city|default:"0" }}</td>
+                <td>{{ city_costs|get_item:city|default:"0" }}</td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="3" class="text-center">⚠ No data available</td>
+                <td colspan="4" class="text-center">⚠ No data available</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
     <br>
+
     <h3>📦 Total Units Supplied: {{ total_units_supplied }}</h3>
     <h3>💰 Total Transportation Cost: {{ total_cost }}</h3>
 
     {% else %}
-    <div class="alert alert-warning">⚠ No data available.</div>
+    <div class="alert alert-warning text-center">⚠ No data available.</div>
     {% endif %}
 
     <br>
