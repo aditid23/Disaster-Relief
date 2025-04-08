@@ -1,5 +1,8 @@
 from django.shortcuts import render, redirect
+from django.db.models import Sum, FloatField
+from django.db.models.functions import Coalesce, Cast
 from .lp_solver import solve_transportation_problem  
+from .models import Warehouse, AffectedArea, TransportationCost, AllocationResult, OptimizationResult, PriorityAllocation
 
 def input_data(request):
     if request.method == 'POST':
@@ -34,12 +37,19 @@ def input_data(request):
 
         city_costs = {}  
         total_cost = 0
+        total_units_supplied = sum(solver_output.values())
 
         for (warehouse, area), allocated_units in solver_output.items():
             cost_per_unit = costs.get((warehouse, area), 0)
             total_city_cost = allocated_units * cost_per_unit
             city_costs[area] = city_costs.get(area, 0) + total_city_cost
             total_cost += total_city_cost
+
+        # Calculate fulfillment rate
+        fulfillment_rate = (total_units_supplied / total_demand) * 100 if total_demand else 0
+
+        # Save optimization results
+        save_optimization_results(fulfillment_rate, total_cost, total_units_supplied, {})
 
         request.session['solution'] = solution
         request.session['city_costs'] = city_costs
@@ -88,3 +98,38 @@ def results_page(request):
         'total_cost': total_cost,
         'actual_demands': actual_demands  
     })
+
+def dashboard_page(request):
+    # Aggregate all past optimization results while handling mixed types
+    aggregated_result = OptimizationResult.objects.aggregate(
+        total_fulfillment_rate=Coalesce(Sum(Cast('fulfillment_rate', FloatField())), 0.0),
+        total_cost=Coalesce(Sum(Cast('total_cost', FloatField())), 0.0),
+        total_units=Coalesce(Sum(Cast('total_units', FloatField())), 0.0)
+    )
+
+    # Fetch aggregated priority allocation
+    priority_data = PriorityAllocation.objects.values('priority').annotate(total_units=Sum('units'))
+
+    context = {
+        "fulfillment_rate": aggregated_result["total_fulfillment_rate"],
+        "total_cost": aggregated_result["total_cost"],
+        "total_units": aggregated_result["total_units"]
+        # "priority_data": priority_data
+    }
+    
+    return render(request, "dashboard.html", context)
+
+def save_optimization_results(fulfillment_rate, total_cost, total_units, priority_allocations):
+    # Save results in the database
+    session = OptimizationResult.objects.create(
+        fulfillment_rate=fulfillment_rate,
+        total_cost=total_cost,
+        total_units=total_units
+    )
+
+    # Save priority-based allocation
+    for priority, units in priority_allocations.items():
+        PriorityAllocation.objects.create(session=session, priority=priority, units=units)
+
+def home_redirect(request):
+    return redirect('input_page')

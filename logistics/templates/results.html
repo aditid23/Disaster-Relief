@@ -76,7 +76,11 @@
     {% endif %}
 
     <br>
-    <a href="{% url 'input_page' %}" class="btn btn-primary">Go Back</a>
+
+    <div class="d-flex justify-content-between">
+        <a href="{% url 'input_page' %}" class="btn btn-secondary">⬅️ Go Back</a>
+        <a href="{% url 'go_to_dashboard' %}" class="btn btn-primary">📊 View Dashboard</a>
+    </div>
 
 </body>
 </html>
