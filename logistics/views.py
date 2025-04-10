@@ -39,9 +39,13 @@ def input_data(request):
             adjustment_factor = total_supply / total_demand
             areas = {area: int(demand * adjustment_factor) for area, demand in areas.items()}
             warning_message = "⚠ Total supply is less than demand. Demand has been adjusted proportionally."
-
+        priorities = {
+        'AreaA': 1,
+        'AreaB': 2,
+        'AreaC': 3,
+    }
         try:
-            solver_output = solve_transportation_problem(warehouses, areas, costs)
+            solver_output = solve_transportation_problem(warehouses, areas, costs, priorities)
             solution = {f"{w} → {a}": allocated_units for (w, a), allocated_units in solver_output.items()}
 
             # ✅ Save allocation results to the DB
@@ -64,15 +68,20 @@ def input_data(request):
         total_cost = 0
         total_units_supplied = sum(solver_output.values())
         print("Solver output:", solver_output)
+        priority_allocations = {'High': 0, 'Medium': 0, 'Low': 0}
+        priority_map = {1: 'High', 2: 'Medium', 3: 'Low'}
         for (warehouse, area), allocated_units in solver_output.items():
             cost_per_unit = costs.get((warehouse, area), 0)
             total_city_cost = allocated_units * cost_per_unit
             city_costs[area] = city_costs.get(area, 0) + total_city_cost
             total_cost += total_city_cost
+            prio = priorities.get(area, 3) 
+            prio_label = priority_map.get(prio, 'Low')
+            priority_allocations[prio_label] += units
         print("AllocationResult count after saving:", AllocationResult.objects.count())
         fulfillment_rate = (total_units_supplied / total_demand) * 100 if total_demand else 0
 
-        save_optimization_results(fulfillment_rate, total_cost, total_units_supplied, {})
+        save_optimization_results(fulfillment_rate, total_cost, total_units_supplied, priority_allocations)
 
         request.session['solution'] = solution
         request.session['city_costs'] = city_costs
