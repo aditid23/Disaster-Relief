@@ -51,151 +51,164 @@
 </head>
 <body class="container mt-4">
 
-    <div class="dashboard-container">
-        <h2>📊 Disaster Relief Dashboard</h2>
+<div class="dashboard-container">
+    <h2>📊 Disaster Relief Dashboard</h2>
 
-        <div class="dashboard-metrics">
-            <div class="metric-box green">
-                <p>Fulfillment Rate</p>
-                <h3>{{ fulfillment_rate|floatformat:2 }}%</h3>
-            </div>
-
-            <div class="metric-box blue">
-                <p>Total Cost</p>
-                <h3>💰 {{ total_cost|floatformat:2 }}</h3>
-            </div>
-
-            <div class="metric-box yellow">
-                <p>Total Units Supplied</p>
-                <h3>📦 {{ total_units|default:"0" }}</h3>
-            </div>
+    <div class="dashboard-metrics">
+        <div class="metric-box green">
+            <p>Fulfillment Rate</p>
+            <h3>{{ fulfillment_rate|floatformat:2 }}%</h3>
         </div>
 
-        <!-- ✅ Graph Buttons + Reset Button -->
-        <div class="graph-buttons text-center">
-            <button class="btn btn-primary" onclick="showGraph('costVsUnits')">📈 Cost vs. Units</button>
-            <button class="btn btn-success" onclick="showGraph('costVsFulfillment')">📉 Cost vs. Fulfillment</button>
-            <button class="btn btn-warning" onclick="showGraph('fulfillmentVsUnits')">📊 Fulfillment vs. Units</button>
-            <br><br>
-            <button class="btn btn-danger" onclick="resetDashboard()">🔁 Reset Values</button>
+        <div class="metric-box blue">
+            <p>Total Cost</p>
+            <h3>💰 {{ total_cost|floatformat:2 }}</h3>
         </div>
 
-        <!-- ✅ Graph Container -->
-        <div class="graph-container">
-            <canvas id="graphCanvas"></canvas>
+        <div class="metric-box yellow">
+            <p>Total Units Supplied</p>
+            <h3>📦 {{ total_units|default:"0" }}</h3>
         </div>
     </div>
 
-    <a href="{% url 'results_page' %}" class="btn btn-secondary mt-3">⬅️ Back to Results</a>
-    <a href="{% url 'input_page' %}" class="btn btn-secondary mt-3">⬅️ Home</a>
+    <!-- ✅ Graph Buttons -->
+    <div class="graph-buttons text-center">
+        <button class="btn btn-primary" onclick="showGraph('costVsUnits')">📈 Cost vs. Units</button>
+        <button class="btn btn-success" onclick="showGraph('costVsFulfillment')">📉 Cost vs. Fulfillment</button>
+        <button class="btn btn-warning" onclick="showGraph('fulfillmentVsUnits')">📊 Fulfillment vs. Units</button>
+        <button class="btn btn-info" onclick="showGraph('priorityWise')">🏷️ Priority-wise Units</button>
+        <br><br>
+        <button class="btn btn-danger" onclick="resetDashboard()">🔁 Reset Values</button>
+    </div>
 
-    <script>
-        let graphCanvas = document.getElementById("graphCanvas").getContext("2d");
-        let graphChart = null;
+    <!-- ✅ Graph Container -->
+    <div class="graph-container">
+        <canvas id="graphCanvas"></canvas>
+    </div>
+</div>
 
-        // ✅ Store Django variables in JavaScript
-        var totalCost = parseFloat("{{ total_cost|default:'0' }}");
-        var totalUnits = parseFloat("{{ total_units|default:'0' }}");
-        var fulfillmentRate = parseFloat("{{ fulfillment_rate|default:'0' }}");
+<a href="{% url 'results_page' %}" class="btn btn-secondary mt-3">⬅️ Back to Results</a>
+<a href="{% url 'input_page' %}" class="btn btn-secondary mt-3">⬅️ Home</a>
 
-        function showGraph(type) {
-            document.querySelector('.graph-container').style.display = 'block';
+<script>
+    let graphCanvas = document.getElementById("graphCanvas").getContext("2d");
+    let graphChart = null;
 
-            if (graphChart) {
-                graphChart.destroy();
-            }
+    // ✅ Store Django variables in JavaScript
+    var totalCost = parseFloat("{{ total_cost|default:'0' }}");
+    var totalUnits = parseFloat("{{ total_units|default:'0' }}");
+    var fulfillmentRate = parseFloat("{{ fulfillment_rate|default:'0' }}");
+    const priorityData = JSON.parse('{{ priority_data|safe|escapejs }}');
 
-            let labels = [];
-            let dataValues = [];
-            let backgroundColors = ["#17a2b8", "#ffc107"];
-            let borderColors = ["#127a8f", "#d39e00"];
-            let chartTitle = "";
+    function showGraph(type) {
+        document.querySelector('.graph-container').style.display = 'block';
 
-            if (type === "costVsUnits") {
-                labels = ["Total Cost", "Total Units Supplied"];
-                dataValues = [totalCost, totalUnits];
-                backgroundColors = ["#ff6384", "#36a2eb"];
-                borderColors = ["#c82333", "#1e7eeb"];
-                chartTitle = "Cost vs. Units";
+        if (graphChart) {
+            graphChart.destroy();
+        }
 
-            } else if (type === "costVsFulfillment") {
-                labels = ["Total Cost", "Fulfillment Rate"];
-                dataValues = [totalCost, fulfillmentRate];
-                backgroundColors = ["#ff9f40", "#4bc0c0"];
-                borderColors = ["#d77b25", "#368b8b"];
-                chartTitle = "Cost vs. Fulfillment";
+        let labels = [];
+        let dataValues = [];
+        let backgroundColors = [];
+        let borderColors = [];
+        let chartTitle = "";
+        let chartType = "bar";  // default
 
-            } else if (type === "fulfillmentVsUnits") {
-                labels = ["Fulfillment Rate", "Total Units Supplied"];
-                dataValues = [fulfillmentRate, totalUnits];
-                backgroundColors = ["#9966ff", "#ffcd56"];
-                borderColors = ["#7a4ed7", "#d4a400"];
-                chartTitle = "Fulfillment vs. Units";
-            }
+        if (type === "priorityWise") {
+            labels = priorityData.map(item => "Priority " + item.priority);
+            dataValues = priorityData.map(item => item.total_units);
+            backgroundColors = ["#dc3545", "#ffc107", "#28a745"];
+            borderColors = ["#a71d2a", "#d39e00", "#1c7c34"];
+            chartTitle = "Priority-wise Units Allocated";
+            chartType = "pie";
 
-            graphChart = new Chart(graphCanvas, {
-                type: "bar",
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: chartTitle,
-                        data: dataValues,
-                        backgroundColor: backgroundColors,
-                        borderColor: borderColors,
-                        borderWidth: 2,
-                        hoverBackgroundColor: "#00000033",
-                        hoverBorderColor: "#000000"
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: chartTitle,
-                            font: { size: 18 }
-                        },
-                        legend: { display: false },
-                        tooltip: {
-                            enabled: true,
-                            backgroundColor: "#ffffff",
-                            titleColor: "#333",
-                            bodyColor: "#000"
-                        }
+        } else if (type === "costVsUnits") {
+            labels = ["Total Cost", "Total Units Supplied"];
+            dataValues = [totalCost, totalUnits];
+            backgroundColors = ["#ff6384", "#36a2eb"];
+            borderColors = ["#c82333", "#1e7eeb"];
+            chartTitle = "Cost vs. Units";
+
+        } else if (type === "costVsFulfillment") {
+            labels = ["Total Cost", "Fulfillment Rate"];
+            dataValues = [totalCost, fulfillmentRate];
+            backgroundColors = ["#ff9f40", "#4bc0c0"];
+            borderColors = ["#d77b25", "#368b8b"];
+            chartTitle = "Cost vs. Fulfillment";
+
+        } else if (type === "fulfillmentVsUnits") {
+            labels = ["Fulfillment Rate", "Total Units Supplied"];
+            dataValues = [fulfillmentRate, totalUnits];
+            backgroundColors = ["#9966ff", "#ffcd56"];
+            borderColors = ["#7a4ed7", "#d4a400"];
+            chartTitle = "Fulfillment vs. Units";
+        }
+
+        graphChart = new Chart(graphCanvas, {
+            type: chartType,
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: chartTitle,
+                    data: dataValues,
+                    backgroundColor: backgroundColors,
+                    borderColor: borderColors,
+                    borderWidth: 2,
+                    hoverBackgroundColor: "#00000033",
+                    hoverBorderColor: "#000000"
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: chartTitle,
+                        font: { size: 18 }
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: "#ddd" }
-                        },
-                        x: {
-                            grid: { color: "#ddd" }
-                        }
+                    legend: {
+                        display: true,
+                        position: "bottom"
+                    },
+                    tooltip: {
+                        enabled: true,
+                        backgroundColor: "#ffffff",
+                        titleColor: "#333",
+                        bodyColor: "#000"
                     }
-                }
-            });
-        }
-
-        // ✅ Reset Dashboard Values
-        function resetDashboard() {
-            // Reset text inside the metric boxes
-            document.querySelector('.green h3').innerText = "0.00%";
-            document.querySelector('.blue h3').innerText = "💰 0.00";
-            document.querySelector('.yellow h3').innerText = "📦 0";
-
-            // Reset JS variables
-            totalCost = 0;
-            totalUnits = 0;
-            fulfillmentRate = 0;
-
-            // Reset graph if it's already showing
-            if (graphChart) {
-                graphChart.data.datasets[0].data = [0, 0];
-                graphChart.update();
+                },
+                scales: chartType === "bar" ? {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: "#ddd" }
+                    },
+                    x: {
+                        grid: { color: "#ddd" }
+                    }
+                } : {}
             }
+        });
+    }
+
+    // ✅ Reset Dashboard Values
+    function resetDashboard() {
+        // Reset text inside the metric boxes
+        document.querySelector('.green h3').innerText = "0.00%";
+        document.querySelector('.blue h3').innerText = "💰 0.00";
+        document.querySelector('.yellow h3').innerText = "📦 0";
+
+        // Reset JS variables
+        totalCost = 0;
+        totalUnits = 0;
+        fulfillmentRate = 0;
+
+        // Reset graph if it's already showing
+        if (graphChart) {
+            graphChart.destroy();
         }
-    </script>
+    }
+</script>
 
 </body>
 </html>

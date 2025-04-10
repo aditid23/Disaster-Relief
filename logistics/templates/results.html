@@ -1,9 +1,9 @@
-{% load static %}
-{% load custom_filter %}
+    {% load static %}
+    {% load custom_filter %}
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Optimization Results</title>
@@ -11,69 +11,75 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-</head>
-<body class="container mt-4">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    </head>
+
+    <body class="container mt-4">
     <h2 class="mb-3 text-center">Optimization Results</h2>
     <br>
 
-    {% if solution %}
-    <table class="table table-bordered">
+    <div id="results-content"> <!-- 📌 Wrap content for export -->
+
+        {% if solution %}
+        <table class="table table-bordered">
         <thead class="table-dark">
             <tr>
-                <th>From Warehouse</th>
-                <th>To Area</th>
-                <th>Allocated Units</th>
+            <th>From Warehouse</th>
+            <th>To Area</th>
+            <th>Allocated Units</th>
             </tr>
         </thead>
         <tbody>
             {% for entry in solution %}
             <tr>
-                <td>{{ entry.warehouse }}</td>
-                <td>{{ entry.area }}</td>
-                <td>{{ entry.allocation }}</td>
+            <td>{{ entry.warehouse }}</td>
+            <td>{{ entry.area }}</td>
+            <td>{{ entry.allocation }}</td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="3" class="text-center">⚠ No data available</td>
+            <td colspan="3" class="text-center">⚠ No data available</td>
             </tr>
             {% endfor %}
         </tbody>
-    </table>
-    <br>
+        </table>
 
-    <h3>🚛 Total Units Per City</h3>
-    <table class="table table-bordered">
+        <br>
+        <h3>🚛 Total Units Per City</h3>
+        <table class="table table-bordered">
         <thead class="table-dark">
             <tr>
-                <th>City</th>
-                <th>Total Demand</th>
-                <th>Total Units Supplied</th>
-                <th>Total Cost</th>
+            <th>City</th>
+            <th>Total Demand</th>
+            <th>Total Units Supplied</th>
+            <th>Total Cost</th>
             </tr>
         </thead>
         <tbody>
             {% for city in sorted_cities %}
             <tr>
-                <td>{{ city }}</td>
-                <td>{{ actual_demands|get_item:city|default:"0" }}</td>
-                <td>{{ city_units|get_item:city|default:"0" }}</td>
-                <td>{{ city_costs|get_item:city|default:"0" }}</td>
+            <td>{{ city }}</td>
+            <td>{{ actual_demands|get_item:city|default:"0" }}</td>
+            <td>{{ city_units|get_item:city|default:"0" }}</td>
+            <td>{{ city_costs|get_item:city|default:"0" }}</td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="4" class="text-center">⚠ No data available</td>
+            <td colspan="4" class="text-center">⚠ No data available</td>
             </tr>
             {% endfor %}
         </tbody>
-    </table>
-    <br>
+        </table>
 
-    <h3>📦 Total Units Supplied: {{ total_units_supplied }}</h3>
-    <h3>💰 Total Transportation Cost: {{ total_cost }}</h3>
+        <br>
+        <h3>📦 Total Units Supplied: {{ total_units_supplied }}</h3>
+        <h3>💰 Total Transportation Cost: {{ total_cost }}</h3>
 
-    {% else %}
-    <div class="alert alert-warning text-center">⚠ No data available.</div>
-    {% endif %}
+        {% else %}
+        <div class="alert alert-warning text-center">⚠ No data available.</div>
+        {% endif %}
+    </div>
 
     <br>
 
@@ -82,5 +88,47 @@
         <a href="{% url 'go_to_dashboard' %}" class="btn btn-primary">📊 View Dashboard</a>
     </div>
 
-</body>
-</html>
+    <br>
+    
+    <!-- results.html or wherever the button is -->
+    <a href="{% url 'export_csv' %}" class="btn btn-primary">Download CSV</a>
+
+
+    <script>
+        async function downloadPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        const content = document.getElementById("results-content");
+        const canvas = await html2canvas(content);
+        const imgData = canvas.toDataURL("image/png");
+
+        const pdfWidth = doc.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+        doc.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+        doc.save("results_report.pdf");
+        }
+
+        function exportToCSV() {
+        const rows = [["Warehouse", "Area", "Allocated Units"]];
+        const data = {{ solution_json|safe }};  // <- ensure this is passed from views.py
+
+        data.forEach(item => {
+            rows.push([item.warehouse, item.area, item.allocation]);
+        });
+
+        const csvContent = "data:text/csv;charset=utf-8,"
+            + rows.map(e => e.join(",")).join("\n");
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "results_report.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        }
+    </script>
+    </body>
+    </html>
