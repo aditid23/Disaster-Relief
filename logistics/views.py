@@ -77,7 +77,7 @@ def input_data(request):
             total_cost += total_city_cost
             prio = priorities.get(area, 3) 
             prio_label = priority_map.get(prio, 'Low')
-            priority_allocations[prio_label] += units
+            priority_allocations[prio_label] += allocated_units
         print("AllocationResult count after saving:", AllocationResult.objects.count())
         fulfillment_rate = (total_units_supplied / total_demand) * 100 if total_demand else 0
 
