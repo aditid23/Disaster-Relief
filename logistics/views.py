@@ -1,20 +1,21 @@
-import json
 import csv
+import json
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.db.models import Sum, FloatField
 from django.db.models.functions import Coalesce, Cast
 
 from .lp_solver import solve_transportation_problem  
-from .models import Warehouse, AffectedArea, TransportationCost, AllocationResult, OptimizationResult, PriorityAllocation
+from .models import (
+    Warehouse,
+    AffectedArea,
+    TransportationCost,
+    AllocationResult,
+    OptimizationResult,
+)
 
+# -------------------- Input View --------------------
 
-# -------------------- Home Redirect --------------------
-def home_redirect(request):
-    return redirect('input_page')
-
-
-# -------------------- Input Data Handler --------------------
 def input_data(request):
     if request.method == 'POST':
         warehouse_names = request.POST.getlist('warehouse_name[]')
@@ -39,49 +40,26 @@ def input_data(request):
             adjustment_factor = total_supply / total_demand
             areas = {area: int(demand * adjustment_factor) for area, demand in areas.items()}
             warning_message = "⚠ Total supply is less than demand. Demand has been adjusted proportionally."
-        priorities = {
-        'AreaA': 1,
-        'AreaB': 2,
-        'AreaC': 3,
-    }
+
         try:
-            solver_output = solve_transportation_problem(warehouses, areas, costs, priorities)
+            solver_output = solve_transportation_problem(warehouses, areas, costs)
             solution = {f"{w} → {a}": allocated_units for (w, a), allocated_units in solver_output.items()}
-
-            # ✅ Save allocation results to the DB
-            AllocationResult.objects.all().delete()
-
-            for (warehouse, area), units in solver_output.items():
-                cost_per_unit = costs.get((warehouse, area), 0)
-                AllocationResult.objects.create(
-                warehouse=warehouse,
-                area=area,
-                allocated_units=units,
-                cost=cost_per_unit
-                )
-
-
         except Exception as e:
             return render(request, 'input.html', {'error_message': f"Solver error: {str(e)}"})
 
         city_costs = {}  
         total_cost = 0
         total_units_supplied = sum(solver_output.values())
-        print("Solver output:", solver_output)
-        priority_allocations = {'High': 0, 'Medium': 0, 'Low': 0}
-        priority_map = {1: 'High', 2: 'Medium', 3: 'Low'}
+
         for (warehouse, area), allocated_units in solver_output.items():
             cost_per_unit = costs.get((warehouse, area), 0)
             total_city_cost = allocated_units * cost_per_unit
             city_costs[area] = city_costs.get(area, 0) + total_city_cost
             total_cost += total_city_cost
-            prio = priorities.get(area, 3) 
-            prio_label = priority_map.get(prio, 'Low')
-            priority_allocations[prio_label] += allocated_units
-        print("AllocationResult count after saving:", AllocationResult.objects.count())
+
         fulfillment_rate = (total_units_supplied / total_demand) * 100 if total_demand else 0
 
-        save_optimization_results(fulfillment_rate, total_cost, total_units_supplied, priority_allocations)
+        save_optimization_results(fulfillment_rate, total_cost, total_units_supplied)
 
         request.session['solution'] = solution
         request.session['city_costs'] = city_costs
@@ -93,7 +71,9 @@ def input_data(request):
 
     return render(request, 'input.html')
 
-# -------------------- Results Page --------------------
+
+# -------------------- Results View --------------------
+
 def results_page(request):
     solution = request.session.get('solution', {})
     city_costs = request.session.get('city_costs', {})
@@ -133,7 +113,8 @@ def results_page(request):
     })
 
 
-# -------------------- Dashboard Page --------------------
+# -------------------- Dashboard View --------------------
+
 def dashboard_page(request):
     aggregated_result = OptimizationResult.objects.aggregate(
         total_fulfillment_rate=Coalesce(Sum(Cast('fulfillment_rate', FloatField())), 0.0),
@@ -141,57 +122,56 @@ def dashboard_page(request):
         total_units=Coalesce(Sum(Cast('total_units', FloatField())), 0.0)
     )
 
-    priority_qs = PriorityAllocation.objects.values('priority').annotate(total_units=Sum('units'))
-    priority_data = list(priority_qs)
 
     context = {
         "fulfillment_rate": aggregated_result["total_fulfillment_rate"],
         "total_cost": aggregated_result["total_cost"],
         "total_units": aggregated_result["total_units"],
-        "priority_data": json.dumps(priority_data)
     }
 
     return render(request, "dashboard.html", context)
 
 
-# -------------------- Save Optimization Results --------------------
-def save_optimization_results(fulfillment_rate, total_cost, total_units, priority_allocations):
-    session = OptimizationResult.objects.create(
-        fulfillment_rate=fulfillment_rate,
-        total_cost=total_cost,
-        total_units=total_units
-    )
+# -------------------- Dashboard Mock View (Optional) --------------------
 
-    for priority, units in priority_allocations.items():
-        PriorityAllocation.objects.create(session=session, priority=priority, units=units)
-
-
-# -------------------- Static Dashboard Mock View --------------------
 def dashboard_view(request):
-    priority_data = [
-        {"priority": "High", "total_units": 150},
-        {"priority": "Medium", "total_units": 100},
-        {"priority": "Low", "total_units": 50}
-    ]
     return render(request, "dashboard.html", {
-        "priority_data_json": json.dumps(priority_data),
         "total_cost": 10000,
         "total_units": 300,
         "fulfillment_rate": 85
     })
 
 
-# -------------------- Export CSV --------------------
+# -------------------- Save Optimization Helper --------------------
+
+def save_optimization_results(fulfillment_rate, total_cost, total_units):
+    session = OptimizationResult.objects.create(
+        fulfillment_rate=fulfillment_rate,
+        total_cost=total_cost,
+        total_units=total_units
+    )
+
+
+# -------------------- Export CSV View --------------------
+
 def export_csv(request):
     response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="allocation_results.csv"'
+    response['Content-Disposition'] = 'attachment; filename="optimization_results.csv"'
 
     writer = csv.writer(response)
-    writer.writerow(['Warehouse', 'Area', 'Allocated Units', 'Cost'])
+    writer.writerow(['Timestamp', 'Fulfillment Rate', 'Total Cost', 'Total Units'])
 
-    results = AllocationResult.objects.all()
-    for result in results:
-        writer.writerow([result.warehouse, result.area, result.allocated_units, result.cost])
+    # Fetch data from your model
+    optimization_results = OptimizationResult.objects.all()
+
+    # Write data to the CSV
+    for result in optimization_results:
+        writer.writerow([result.timestamp, result.fulfillment_rate, result.total_cost, result.total_units])
 
     return response
 
+
+# -------------------- Home Redirect View --------------------
+
+def home_redirect(request):
+    return redirect('input_page')

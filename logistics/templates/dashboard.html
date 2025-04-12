@@ -76,7 +76,6 @@
         <button class="btn btn-primary" onclick="showGraph('costVsUnits')">📈 Cost vs. Units</button>
         <button class="btn btn-success" onclick="showGraph('costVsFulfillment')">📉 Cost vs. Fulfillment</button>
         <button class="btn btn-warning" onclick="showGraph('fulfillmentVsUnits')">📊 Fulfillment vs. Units</button>
-        <button class="btn btn-info" onclick="showGraph('priorityWise')">🏷️ Priority-wise Units</button>
         <br><br>
         <button class="btn btn-danger" onclick="resetDashboard()">🔁 Reset Values</button>
     </div>
@@ -98,7 +97,6 @@
     var totalCost = parseFloat("{{ total_cost|default:'0' }}");
     var totalUnits = parseFloat("{{ total_units|default:'0' }}");
     var fulfillmentRate = parseFloat("{{ fulfillment_rate|default:'0' }}");
-    const priorityData = JSON.parse('{{ priority_data|safe|escapejs }}');
 
     function showGraph(type) {
         document.querySelector('.graph-container').style.display = 'block';
@@ -114,15 +112,7 @@
         let chartTitle = "";
         let chartType = "bar";  // default
 
-        if (type === "priorityWise") {
-            labels = priorityData.map(item => "Priority " + item.priority);
-            dataValues = priorityData.map(item => item.total_units);
-            backgroundColors = ["#dc3545", "#ffc107", "#28a745"];
-            borderColors = ["#a71d2a", "#d39e00", "#1c7c34"];
-            chartTitle = "Priority-wise Units Allocated";
-            chartType = "pie";
-
-        } else if (type === "costVsUnits") {
+        if (type === "costVsUnits") {
             labels = ["Total Cost", "Total Units Supplied"];
             dataValues = [totalCost, totalUnits];
             backgroundColors = ["#ff6384", "#36a2eb"];

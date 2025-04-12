@@ -1,10 +1,5 @@
 from django.db import models
 
-PRIORITY_CHOICES = [
-    ('High', 'High'),
-    ('Medium', 'Medium'),
-    ('Low', 'Low'),
-]
 
 class Warehouse(models.Model):
     name = models.CharField(max_length=100)
@@ -16,10 +11,9 @@ class Warehouse(models.Model):
 class AffectedArea(models.Model):
     name = models.CharField(max_length=100)
     demand = models.PositiveIntegerField()
-    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='Medium')
 
     def __str__(self):
-        return f"{self.name} ({self.priority})"
+        return self.name  # Removed the priority reference
 
 class TransportationCost(models.Model):
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE)
@@ -48,8 +42,3 @@ class OptimizationResult(models.Model):
     fulfillment_rate = models.FloatField()
     total_cost = models.FloatField()
     total_units = models.IntegerField()
-
-class PriorityAllocation(models.Model):
-    session = models.ForeignKey(OptimizationResult, on_delete=models.CASCADE, related_name="allocations")
-    priority = models.CharField(max_length=10, choices=[("High", "High"), ("Medium", "Medium"), ("Low", "Low")])
-    units = models.IntegerField()
